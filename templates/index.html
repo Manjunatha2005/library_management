@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Book Worm — Library System</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f0a05; --surface:#1a1208; --surface2:#241a0c; --border:#3d2e14;
+  --gold:#f0b429; --gold2:#e8942a; --cream:#f5edd6; --muted:#8a7355;
+  --green:#16a34a; --red:#dc2626; --blue:#2563eb;
+  --font-head:'Playfair Display',serif; --font-body:'Inter',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--cream);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;}
+
+/* BOOK TEXTURE BG */
+body::before{content:'';position:fixed;inset:0;
+  background-image:radial-gradient(ellipse at 20% 50%,rgba(240,180,41,0.04) 0%,transparent 60%),
+  radial-gradient(ellipse at 80% 20%,rgba(232,148,42,0.03) 0%,transparent 50%);
+  pointer-events:none;z-index:0;}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen{
+  position:fixed;inset:0;background:var(--bg);z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:0;
+}
+.login-wrap{width:100%;max-width:460px;padding:20px;}
+.login-brand{text-align:center;margin-bottom:40px;}
+.login-brand .icon{font-size:56px;margin-bottom:12px;display:block;
+  filter:drop-shadow(0 0 24px rgba(240,180,41,0.5));}
+.login-brand h1{font-family:var(--font-head);font-size:34px;font-weight:800;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.login-brand p{color:var(--muted);font-size:13px;margin-top:6px;letter-spacing:2px;text-transform:uppercase;}
+
+.login-tabs{display:flex;gap:0;margin-bottom:24px;
+  background:var(--surface);border-radius:12px;padding:4px;border:1px solid var(--border);}
+.login-tab{flex:1;padding:10px;text-align:center;border-radius:9px;cursor:pointer;
+  font-size:13px;font-weight:600;color:var(--muted);transition:all 0.2s;}
+.login-tab.active{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;}
+
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:32px;}
+.login-card h2{font-family:var(--font-head);font-size:22px;margin-bottom:6px;}
+.login-card p{color:var(--muted);font-size:13px;margin-bottom:24px;}
+
+.field{margin-bottom:16px;}
+label{display:block;font-size:11px;font-weight:700;letter-spacing:0.8px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+input[type=text],input[type=password],input[type=number],textarea,select{
+  width:100%;background:#0a0703;border:1px solid var(--border);border-radius:10px;
+  padding:11px 14px;color:var(--cream);font-family:var(--font-body);font-size:14px;
+  outline:none;transition:border-color 0.2s;}
+input:focus,textarea:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,180,41,0.1);}
+textarea{resize:vertical;min-height:80px;}
+
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:10px;
+  font-family:var(--font-body);font-size:14px;font-weight:600;cursor:pointer;border:none;
+  transition:all 0.2s;}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,180,41,0.35);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--cream);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-danger{background:rgba(220,38,38,0.15);color:var(--red);border:1px solid rgba(220,38,38,0.3);}
+.btn-danger:hover{background:rgba(220,38,38,0.25);}
+.btn-success{background:rgba(22,163,74,0.15);color:var(--green);border:1px solid rgba(22,163,74,0.3);}
+.btn-success:hover{background:rgba(22,163,74,0.25);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none!important;}
+.btn-full{width:100%;justify-content:center;margin-top:8px;}
+
+.err-msg{background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.3);border-radius:8px;
+  padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px;display:none;}
+.register-link{text-align:center;margin-top:16px;font-size:13px;color:var(--muted);}
+.register-link span{color:var(--gold);cursor:pointer;font-weight:600;}
+.register-link span:hover{text-decoration:underline;}
+
+/* ── MAIN APP ── */
+#app{display:none;min-height:100vh;position:relative;z-index:1;}
+
+/* SIDEBAR */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:100;}
+.sidebar-brand{padding:24px 20px 20px;border-bottom:1px solid var(--border);}
+.sidebar-brand .icon{font-size:28px;margin-bottom:8px;display:block;}
+.sidebar-brand h1{font-family:var(--font-head);font-size:17px;font-weight:800;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;}
+.sidebar-role{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:20px;
+  font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
+.role-admin{background:rgba(240,180,41,0.15);color:var(--gold);border:1px solid rgba(240,180,41,0.3);}
+.role-user{background:rgba(37,99,235,0.15);color:#60a5fa;border:1px solid rgba(37,99,235,0.3);}
+
+nav{flex:1;padding:12px 10px;overflow-y:auto;}
+.nav-section{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);padding:8px 10px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);
+  transition:all 0.2s;margin-bottom:2px;border:1px solid transparent;}
+.nav-item:hover{background:var(--surface2);color:var(--cream);}
+.nav-item.active{background:linear-gradient(135deg,rgba(240,180,41,0.15),rgba(232,148,42,0.08));
+  color:var(--gold);border-color:rgba(240,180,41,0.25);}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+
+.sidebar-footer{padding:16px 10px;border-top:1px solid var(--border);}
+.user-badge{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;margin-bottom:10px;}
+.user-badge .uid{font-size:12px;font-weight:700;color:var(--cream);}
+.user-badge .urole{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* MAIN */
+.main{margin-left:230px;min-height:100vh;padding:32px 36px;}
+.page-header{margin-bottom:28px;}
+.page-header h2{font-family:var(--font-head);font-size:28px;font-weight:800;margin-bottom:4px;}
+.page-header p{color:var(--muted);font-size:14px;}
+
+.section{display:none;animation:fadeUp 0.3s ease;}
+.section.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;
+  position:relative;overflow:hidden;transition:transform 0.2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--c,var(--gold));}
+.stat-icon{font-size:26px;margin-bottom:10px;opacity:0.8;}
+.stat-val{font-family:var(--font-head);font-size:36px;font-weight:800;line-height:1;
+  color:var(--c,var(--gold));}
+.stat-label{font-size:12px;color:var(--muted);margin-top:6px;font-weight:500;}
+
+/* CARDS & TABLES */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;}
+.card-header{padding:18px 20px;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.card-title{font-family:var(--font-head);font-size:16px;font-weight:700;}
+.card-body{padding:20px;}
+
+table{width:100%;border-collapse:collapse;}
+th{padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
+  color:var(--muted);text-align:left;background:var(--surface2);border-bottom:1px solid var(--border);}
+td{padding:13px 16px;font-size:13px;border-bottom:1px solid rgba(61,46,20,0.4);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(240,180,41,0.03);}
+.empty-row td{text-align:center;color:var(--muted);padding:32px;font-size:13px;}
+
+/* PILLS */
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.pill-green{background:rgba(22,163,74,0.15);color:var(--green);border:1px solid rgba(22,163,74,0.3);}
+.pill-red{background:rgba(220,38,38,0.15);color:var(--red);border:1px solid rgba(220,38,38,0.3);}
+.pill-gold{background:rgba(240,180,41,0.15);color:var(--gold);border:1px solid rgba(240,180,41,0.3);}
+.pill-blue{background:rgba(37,99,235,0.15);color:#60a5fa;border:1px solid rgba(37,99,235,0.3);}
+
+/* SEARCH BAR */
+.search-bar{display:flex;gap:10px;align-items:center;}
+.search-bar input{max-width:220px;}
+
+/* FORM GRID */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-grid .field{margin-bottom:0;}
+.form-grid .span2{grid-column:1/-1;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;
+  display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:28px;width:100%;max-width:480px;animation:fadeUp 0.3s ease;}
+.modal h3{font-family:var(--font-head);font-size:20px;margin-bottom:6px;}
+.modal p{color:var(--muted);font-size:13px;margin-bottom:20px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:12px 18px;font-size:13px;display:flex;align-items:center;gap:10px;
+  min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:slideIn 0.3s ease;}
+.toast.success{border-color:rgba(22,163,74,0.5);}
+.toast.error{border-color:rgba(220,38,38,0.5);}
+@keyframes slideIn{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:none;}}
+
+/* FEEDBACK STARS */
+.rating-bar{display:flex;gap:6px;align-items:center;margin:4px 0 16px;}
+.star{font-size:24px;cursor:pointer;opacity:0.3;transition:opacity 0.15s;}
+.star.active{opacity:1;}
+
+/* SPINNER */
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.2);
+  border-top-color:currentColor;border-radius:50%;animation:spin 0.6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* BOOK ISSUED BANNER */
+.issued-banner{background:linear-gradient(135deg,rgba(22,163,74,0.1),rgba(22,163,74,0.05));
+  border:1px solid rgba(22,163,74,0.3);border-radius:14px;padding:20px;margin-bottom:20px;
+  display:flex;align-items:center;gap:16px;}
+.issued-banner .book-icon{font-size:36px;}
+.issued-banner h3{font-family:var(--font-head);font-size:16px;margin-bottom:4px;}
+.issued-banner p{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-wrap">
+    <div class="login-brand">
+      <span class="icon">📚</span>
+      <h1>The Book Worm</h1>
+      <p>Library Management System</p>
+    </div>
+
+    <div class="login-tabs">
+      <div class="login-tab active" onclick="switchLoginTab('admin')">🔑 Admin Login</div>
+      <div class="login-tab" onclick="switchLoginTab('user')">👤 User Login</div>
+    </div>
+
+    <!-- ADMIN LOGIN -->
+    <div id="adminLoginForm" class="login-card">
+      <h2>Admin Sign In</h2>
+      <p>Access the full library management dashboard</p>
+      <div class="err-msg" id="adminErr"></div>
+      <div class="field"><label>Admin ID</label>
+        <input type="text" id="adminID" placeholder="e.g. Kunal1020">
+      </div>
+      <div class="field"><label>Password</label>
+        <input type="password" id="adminPwd" placeholder="Enter password">
+      </div>
+      <button class="btn btn-gold btn-full" onclick="doAdminLogin()">Sign In as Admin</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">
+        Default: Kunal1020 / 123 &nbsp;|&nbsp; Siddesh510 / 786 &nbsp;|&nbsp; Vishal305 / 675
+      </p>
+    </div>
+
+    <!-- USER LOGIN -->
+    <div id="userLoginForm" class="login-card" style="display:none">
+      <div id="userLoginView">
+        <h2>User Sign In</h2>
+        <p>Login to borrow and manage your books</p>
+        <div class="err-msg" id="userErr"></div>
+        <div class="field"><label>User ID</label>
+          <input type="text" id="userID" placeholder="e.g. 101">
+        </div>
+        <div class="field"><label>Password</label>
+          <input type="password" id="userPwd" placeholder="Enter password">
+        </div>
+        <button class="btn btn-gold btn-full" onclick="doUserLogin()">Sign In as User</button>
+        <p style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">
+          Default: 101/1234 &nbsp;|&nbsp; 102/3050 &nbsp;|&nbsp; 103/5010
+        </p>
+        <div class="register-link">New user? <span onclick="showRegister()">Create Account</span></div>
+      </div>
+
+      <div id="userRegisterView" style="display:none">
+        <h2>Create Account</h2>
+        <p>Register a new user account</p>
+        <div class="err-msg" id="regErr"></div>
+        <div class="field"><label>User ID</label>
+          <input type="text" id="regUID" placeholder="Choose a unique ID e.g. 201">
+        </div>
+        <div class="field"><label>Full Name</label>
+          <input type="text" id="regName" placeholder="Your full name">
+        </div>
+        <div class="field"><label>Password</label>
+          <input type="password" id="regPwd" placeholder="Choose a password">
+        </div>
+        <button class="btn btn-gold btn-full" onclick="doRegister()">Create Account</button>
+        <div class="register-link">Already have account? <span onclick="showLogin()">Sign In</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ MAIN APP -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="icon">📚</span>
+      <h1>The Book<br>Worm</h1>
+    </div>
+    <nav id="sideNav"></nav>
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="uid" id="sidebarUID">—</div>
+        <div class="urole" id="sidebarRole">—</div>
+      </div>
+      <button class="btn btn-outline" style="width:100%;justify-content:center" onclick="doLogout()">
+        🚪 Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <div class="page-header">
+      <h2 id="pageTitle">Dashboard</h2>
+      <p id="pageSubtitle">Welcome back!</p>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div class="section active" id="sec-dashboard">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">📖 Recent Books</div></div>
+          <table><thead><tr><th>ID</th><th>Title</th><th>Status</th></tr></thead>
+          <tbody id="dashBooksTable"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">⭐ Recent Feedback</div></div>
+          <table><thead><tr><th>Review</th><th>Rating</th></tr></thead>
+          <tbody id="dashFeedbackTable"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BOOKS ── -->
+    <div class="section" id="sec-books">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📚 Book Records</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div class="search-bar">
+              <input type="text" id="bookSearch" placeholder="Search by ID / title / author..." oninput="searchBooks()">
+            </div>
+            <button class="btn btn-gold btn-sm" id="addBookBtn" onclick="openModal('addBook')" style="display:none">
+              ➕ Add Book
+            </button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Book ID</th><th>Title</th><th>Author</th><th>Publisher</th><th>Status</th><th id="bookActionsHead"></th></tr></thead>
+          <tbody id="booksTable"><tr class="empty-row"><td colspan="6">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── USERS ── -->
+    <div class="section" id="sec-users">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">👥 User Records</div>
+          <div style="display:flex;gap:10px;">
+            <div class="search-bar">
+              <input type="text" id="userSearch" placeholder="Search users..." oninput="searchUsers()">
+            </div>
+            <button class="btn btn-gold btn-sm" onclick="openModal('addUser')">➕ Add User</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>User ID</th><th>Name</th><th>Password</th><th>Book Issued</th><th></th></tr></thead>
+          <tbody id="usersTable"><tr class="empty-row"><td colspan="5">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ADMINS ── -->
+    <div class="section" id="sec-admins">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🔑 Admin Records</div>
+          <button class="btn btn-gold btn-sm" onclick="openModal('addAdmin')">➕ Add Admin</button>
+        </div>
+        <table>
+          <thead><tr><th>Admin ID</th><th>Password</th><th></th></tr></thead>
+          <tbody id="adminsTable"><tr class="empty-row"><td colspan="3">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── BOOK CENTRE (User) ── -->
+    <div class="section" id="sec-bookcentre">
+      <div id="issuedBanner" class="issued-banner" style="display:none">
+        <div class="book-icon">📖</div>
+        <div>
+          <h3 id="issuedBannerTitle">Book Issued</h3>
+          <p id="issuedBannerSub">Return it before issuing another</p>
+        </div>
+        <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="returnMyBook()">
+          ↩️ Return Book
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📚 Available Books</div>
+          <div class="search-bar">
+            <input type="text" id="userBookSearch" placeholder="Search books..." oninput="searchUserBooks()">
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Book ID</th><th>Title</th><th>Author</th><th>Publisher</th><th>Status</th><th></th></tr></thead>
+          <tbody id="userBooksTable"><tr class="empty-row"><td colspan="6">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── FEEDBACK (Admin view) ── -->
+    <div class="section" id="sec-feedback">
+      <div class="card">
+        <div class="card-header"><div class="card-title">💬 User Feedback & Ratings</div></div>
+        <table>
+          <thead><tr><th>Feedback</th><th>Rating</th><th>Submitted</th></tr></thead>
+          <tbody id="feedbackTable"><tr class="empty-row"><td colspan="3">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── FEEDBACK (User submit) ── -->
+    <div class="section" id="sec-myfeedback">
+      <div class="card" style="max-width:560px">
+        <div class="card-header"><div class="card-title">⭐ Leave Feedback</div></div>
+        <div class="card-body">
+          <div class="field">
+            <label>Your Rating (1–10)</label>
+            <div class="rating-bar" id="starBar"></div>
+            <input type="hidden" id="ratingVal" value="0">
+          </div>
+          <div class="field">
+            <label>Your Review</label>
+            <textarea id="feedbackText" placeholder="Tell us about your experience at The Book Worm..."></textarea>
+          </div>
+          <button class="btn btn-gold btn-full" onclick="submitFeedback()">📨 Submit Feedback</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ MODALS -->
+
+<!-- ADD BOOK -->
+<div class="modal-overlay" id="modal-addBook">
+  <div class="modal">
+    <h3>➕ Add New Book</h3><p>Fill in all book details</p>
+    <div class="form-grid">
+      <div class="field"><label>Book ID</label><input type="text" id="nb-id" placeholder="e.g. B006"></div>
+      <div class="field"><label>Book Name</label><input type="text" id="nb-name" placeholder="Title"></div>
+      <div class="field"><label>Author</label><input type="text" id="nb-author" placeholder="Author name"></div>
+      <div class="field"><label>Publisher</label><input type="text" id="nb-pub" placeholder="Publisher"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addBook')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitAddBook()">Add Book</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT BOOK -->
+<div class="modal-overlay" id="modal-editBook">
+  <div class="modal">
+    <h3>✏️ Edit Book</h3><p>Update book information</p>
+    <input type="hidden" id="eb-id">
+    <div class="form-grid">
+      <div class="field span2"><label>Book Name</label><input type="text" id="eb-name"></div>
+      <div class="field"><label>Author</label><input type="text" id="eb-author"></div>
+      <div class="field"><label>Publisher</label><input type="text" id="eb-pub"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('editBook')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitEditBook()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD USER -->
+<div class="modal-overlay" id="modal-addUser">
+  <div class="modal">
+    <h3>➕ Add New User</h3><p>Register a new library member</p>
+    <div class="field"><label>User ID</label><input type="text" id="nu-id" placeholder="e.g. 201"></div>
+    <div class="field"><label>Full Name</label><input type="text" id="nu-name" placeholder="Full name"></div>
+    <div class="field"><label>Password</label><input type="text" id="nu-pwd" placeholder="Set password"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addUser')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitAddUser()">Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT USER -->
+<div class="modal-overlay" id="modal-editUser">
+  <div class="modal">
+    <h3>✏️ Edit User</h3><p>Update user information</p>
+    <input type="hidden" id="eu-id">
+    <div class="field"><label>Full Name</label><input type="text" id="eu-name"></div>
+    <div class="field"><label>Password</label><input type="text" id="eu-pwd"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('editUser')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitEditUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD ADMIN -->
+<div class="modal-overlay" id="modal-addAdmin">
+  <div class="modal">
+    <h3>➕ Add New Admin</h3><p>Grant admin access</p>
+    <div class="field"><label>Admin ID</label><input type="text" id="na-id" placeholder="e.g. Admin001"></div>
+    <div class="field"><label>Password</label><input type="text" id="na-pwd" placeholder="Set password"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addAdmin')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitAddAdmin()">Add Admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ADMIN -->
+<div class="modal-overlay" id="modal-editAdmin">
+  <div class="modal">
+    <h3>✏️ Edit Admin</h3><p>Update admin password</p>
+    <input type="hidden" id="ea-id">
+    <div class="field"><label>Admin ID</label><input type="text" id="ea-id-show" disabled></div>
+    <div class="field"><label>New Password</label><input type="text" id="ea-pwd"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('editAdmin')">Cancel</button>
+      <button class="btn btn-gold" onclick="submitEditAdmin()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let STATE = { role: null, userId: null, userName: null };
+
+// ── API HELPER ─────────────────────────────────────────────────────────────
+async function api(method, url, body) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function toast(msg, type='success') {
+  const w = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type==='success'?'✅':'❌'}</span><span>${msg}</span>`;
+  w.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='0.3s';
+    setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById('modal-'+id).classList.add('open'); }
+function closeModal(id) { document.getElementById('modal-'+id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m =>
+  m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+// ── LOGIN TAB SWITCH ───────────────────────────────────────────────────────
+function switchLoginTab(tab) {
+  document.querySelectorAll('.login-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='admin')||(i===1&&tab==='user')));
+  document.getElementById('adminLoginForm').style.display = tab==='admin'?'block':'none';
+  document.getElementById('userLoginForm').style.display  = tab==='user' ?'block':'none';
+}
+function showRegister() { document.getElementById('userLoginView').style.display='none'; document.getElementById('userRegisterView').style.display='block'; }
+function showLogin()    { document.getElementById('userRegisterView').style.display='none'; document.getElementById('userLoginView').style.display='block'; }
+
+// ── LOGIN / REGISTER ───────────────────────────────────────────────────────
+async function doAdminLogin() {
+  const id=document.getElementById('adminID').value.trim();
+  const pw=document.getElementById('adminPwd').value;
+  if (!id||!pw) { showErr('adminErr','Enter AdminID and Password'); return; }
+  const d = await api('POST','/api/login/admin',{adminID:id,password:pw});
+  if (d.success) { STATE={role:'admin',userId:id,userName:id}; launchApp(); }
+  else showErr('adminErr', d.error);
+}
+
+async function doUserLogin() {
+  const id=document.getElementById('userID').value.trim();
+  const pw=document.getElementById('userPwd').value;
+  if (!id||!pw) { showErr('userErr','Enter UserID and Password'); return; }
+  const d = await api('POST','/api/login/user',{userID:id,password:pw});
+  if (d.success) { STATE={role:'user',userId:id,userName:d.name}; launchApp(); }
+  else showErr('userErr', d.error);
+}
+
+async function doRegister() {
+  const uid=document.getElementById('regUID').value.trim();
+  const name=document.getElementById('regName').value.trim();
+  const pwd=document.getElementById('regPwd').value;
+  if (!uid||!name||!pwd) { showErr('regErr','All fields required'); return; }
+  const d = await api('POST','/api/register/user',{userID:uid,userName:name,password:pwd});
+  if (d.success) { toast(d.message); showLogin(); }
+  else showErr('regErr', d.error);
+}
+
+function showErr(id, msg) {
+  const el=document.getElementById(id);
+  el.textContent='⚠️ '+msg; el.style.display='block';
+  setTimeout(()=>el.style.display='none', 4000);
+}
+
+async function doLogout() {
+  await api('POST','/api/logout');
+  STATE={role:null,userId:null,userName:null};
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+// ── LAUNCH APP ─────────────────────────────────────────────────────────────
+function launchApp() {
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+
+  // Sidebar user info
+  document.getElementById('sidebarUID').textContent = STATE.userName || STATE.userId;
+  document.getElementById('sidebarRole').textContent = STATE.role === 'admin' ? '🔑 Administrator' : '👤 Member';
+
+  // Build nav
+  const nav = document.getElementById('sideNav');
+  nav.innerHTML = '';
+  const adminNav = [
+    {sec:'dashboard', icon:'📊', label:'Dashboard'},
+    {sec:'books',     icon:'📚', label:'Book Management'},
+    {sec:'users',     icon:'👥', label:'User Management'},
+    {sec:'admins',    icon:'🔑', label:'Admin Management'},
+    {sec:'feedback',  icon:'💬', label:'Feedback & Ratings'},
+  ];
+  const userNav = [
+    {sec:'dashboard',   icon:'📊', label:'Dashboard'},
+    {sec:'bookcentre',  icon:'📖', label:'Book Centre'},
+    {sec:'myfeedback',  icon:'⭐', label:'Leave Feedback'},
+  ];
+  const items = STATE.role==='admin' ? adminNav : userNav;
+  items.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'nav-item';
+    el.dataset.sec = item.sec;
+    el.innerHTML = `<span class="nav-icon">${item.icon}</span>${item.label}`;
+    el.onclick = () => showSection(item.sec);
+    nav.appendChild(el);
+  });
+
+  // Admin: show add book btn
+  if (STATE.role==='admin') {
+    document.getElementById('addBookBtn').style.display='inline-flex';
+    document.getElementById('bookActionsHead').textContent='Actions';
+  }
+
+  // Init star rating
+  buildStars();
+  showSection('dashboard');
+}
+
+// ── SECTION NAV ────────────────────────────────────────────────────────────
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById('sec-'+id);
+  if (sec) sec.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => { if(n.dataset.sec===id) n.classList.add('active'); });
+  const titles = {dashboard:'Dashboard',books:'Book Management',users:'User Management',
+    admins:'Admin Management',bookcentre:'Book Centre',feedback:'Feedback & Ratings',myfeedback:'Leave Feedback'};
+  document.getElementById('pageTitle').textContent = titles[id] || id;
+
+  if (id==='dashboard')  loadDashboard();
+  if (id==='books')      loadBooks();
+  if (id==='users')      loadUsers();
+  if (id==='admins')     loadAdmins();
+  if (id==='bookcentre') loadBookCentre();
+  if (id==='feedback')   loadFeedback();
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const s = await api('GET','/api/stats');
+  const grid = document.getElementById('statsGrid');
+  const isAdmin = STATE.role==='admin';
+  const cards = isAdmin ? [
+    {icon:'📚',val:s.total_books,   label:'Total Books',     c:'var(--gold)'},
+    {icon:'✅',val:s.available_books,label:'Available',      c:'var(--green)'},
+    {icon:'📖',val:s.issued_books,  label:'Books Issued',    c:'#f97316'},
+    {icon:'👥',val:s.total_users,   label:'Total Members',   c:'#60a5fa'},
+  ] : [
+    {icon:'📚',val:s.total_books,    label:'Total Books',    c:'var(--gold)'},
+    {icon:'✅',val:s.available_books,label:'Available Now',  c:'var(--green)'},
+    {icon:'📖',val:s.issued_books,   label:'Currently Issued',c:'#f97316'},
+    {icon:'⭐',val:s.avg_rating+'★', label:'Avg Rating',     c:'var(--gold)'},
+  ];
+  grid.innerHTML = cards.map(c=>`
+    <div class="stat-card" style="--c:${c.c}">
+      <div class="stat-icon">${c.icon}</div>
+      <div class="stat-val">${c.val}</div>
+      <div class="stat-label">${c.label}</div>
+    </div>`).join('');
+
+  // Recent books
+  const books = await api('GET','/api/books');
+  const bt = document.getElementById('dashBooksTable');
+  bt.innerHTML = books.slice(0,5).map(b=>`<tr>
+    <td><span class="pill pill-gold">${b.BookID}</span></td>
+    <td>${b.BookName}</td>
+    <td>${b.IssuedBy ? `<span class="pill pill-red">Issued</span>` : `<span class="pill pill-green">Free</span>`}</td>
+  </tr>`).join('') || '<tr class="empty-row"><td colspan="3">No books yet</td></tr>';
+
+  if (isAdmin) {
+    const fb = await api('GET','/api/feedback');
+    const ft = document.getElementById('dashFeedbackTable');
+    ft.innerHTML = fb.slice(0,5).map(f=>`<tr>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.FeedbackText}</td>
+      <td>${'⭐'.repeat(Math.min(f.Rating,5))} ${f.Rating}/10</td>
+    </tr>`).join('') || '<tr class="empty-row"><td colspan="2">No feedback yet</td></tr>';
+  }
+}
+
+// ── BOOKS (Admin) ─────────────────────────────────────────────────────────
+async function loadBooks(data) {
+  const books = data || await api('GET','/api/books');
+  const tb = document.getElementById('booksTable');
+  const isAdmin = STATE.role==='admin';
+  tb.innerHTML = books.length ? books.map(b=>`<tr>
+    <td><span class="pill pill-gold">${b.BookID}</span></td>
+    <td><strong>${b.BookName}</strong></td>
+    <td>${b.Author}</td>
+    <td>${b.Publisher}</td>
+    <td>${b.IssuedBy ? `<span class="pill pill-red">📖 ${b.IssuedBy}</span>` : `<span class="pill pill-green">Available</span>`}</td>
+    <td>${isAdmin?`<div style="display:flex;gap:6px">
+      <button class="btn btn-outline btn-sm" onclick="editBook('${b.BookID}','${esc(b.BookName)}','${esc(b.Author)}','${esc(b.Publisher)}')">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteBook('${b.BookID}')">🗑</button>
+    </div>`:''}</td>
+  </tr>`).join('') : '<tr class="empty-row"><td colspan="6">No books found</td></tr>';
+}
+
+async function searchBooks() {
+  const q = document.getElementById('bookSearch').value.trim();
+  if (!q) { loadBooks(); return; }
+  const data = await api('GET',`/api/books/search/${encodeURIComponent(q)}`);
+  loadBooks(data);
+}
+
+function editBook(id, name, author, pub) {
+  document.getElementById('eb-id').value = id;
+  document.getElementById('eb-name').value = name;
+  document.getElementById('eb-author').value = author;
+  document.getElementById('eb-pub').value = pub;
+  openModal('editBook');
+}
+
+async function submitAddBook() {
+  const d = {bookID:v('nb-id'),bookName:v('nb-name'),author:v('nb-author'),publisher:v('nb-pub')};
+  const r = await api('POST','/api/books',d);
+  if (r.success) { toast(r.message); closeModal('addBook'); clearInputs(['nb-id','nb-name','nb-author','nb-pub']); loadBooks(); }
+  else toast(r.error,'error');
+}
+
+async function submitEditBook() {
+  const id = document.getElementById('eb-id').value;
+  const d = {bookName:v('eb-name'),author:v('eb-author'),publisher:v('eb-pub')};
+  const r = await api('PUT',`/api/books/${id}`,d);
+  if (r.success) { toast(r.message); closeModal('editBook'); loadBooks(); }
+  else toast(r.error,'error');
+}
+
+async function deleteBook(id) {
+  if (!confirm(`Delete book ${id}? This cannot be undone.`)) return;
+  const r = await api('DELETE',`/api/books/${id}`);
+  if (r.success) { toast(r.message); loadBooks(); }
+  else toast(r.error,'error');
+}
+
+// ── USERS (Admin) ─────────────────────────────────────────────────────────
+async function loadUsers(data) {
+  const users = data || await api('GET','/api/users');
+  const tb = document.getElementById('usersTable');
+  tb.innerHTML = users.length ? users.map(u=>`<tr>
+    <td><span class="pill pill-blue">${u.UserID}</span></td>
+    <td>${u.UserName}</td>
+    <td style="font-family:monospace;color:var(--muted)">${u.Password}</td>
+    <td>${u.BookName ? `<span class="pill pill-red">📖 ${u.BookName}</span>` : '<span class="pill pill-green">None</span>'}</td>
+    <td><div style="display:flex;gap:6px">
+      <button class="btn btn-outline btn-sm" onclick="editUser('${u.UserID}','${esc(u.UserName)}','${esc(u.Password)}')">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.UserID}')">🗑</button>
+    </div></td>
+  </tr>`).join('') : '<tr class="empty-row"><td colspan="5">No users found</td></tr>';
+}
+
+async function searchUsers() {
+  const q = document.getElementById('userSearch').value.trim();
+  if (!q) { loadUsers(); return; }
+  loadUsers(await api('GET',`/api/users/search/${encodeURIComponent(q)}`));
+}
+
+function editUser(id, name, pwd) {
+  document.getElementById('eu-id').value=id;
+  document.getElementById('eu-name').value=name;
+  document.getElementById('eu-pwd').value=pwd;
+  openModal('editUser');
+}
+
+async function submitAddUser() {
+  const r = await api('POST','/api/users',{userID:v('nu-id'),userName:v('nu-name'),password:v('nu-pwd')});
+  if (r.success) { toast(r.message); closeModal('addUser'); clearInputs(['nu-id','nu-name','nu-pwd']); loadUsers(); }
+  else toast(r.error,'error');
+}
+
+async function submitEditUser() {
+  const r = await api('PUT',`/api/users/${document.getElementById('eu-id').value}`,
+    {userName:v('eu-name'),password:v('eu-pwd')});
+  if (r.success) { toast(r.message); closeModal('editUser'); loadUsers(); }
+  else toast(r.error,'error');
+}
+
+async function deleteUser(id) {
+  if (!confirm(`Delete user ${id}?`)) return;
+  const r = await api('DELETE',`/api/users/${id}`);
+  if (r.success) { toast(r.message); loadUsers(); }
+  else toast(r.error,'error');
+}
+
+// ── ADMINS ─────────────────────────────────────────────────────────────────
+async function loadAdmins() {
+  const admins = await api('GET','/api/admins');
+  const tb = document.getElementById('adminsTable');
+  tb.innerHTML = admins.length ? admins.map(a=>`<tr>
+    <td><span class="pill pill-gold">${a.AdminID}</span></td>
+    <td style="font-family:monospace;color:var(--muted)">${a.Password}</td>
+    <td><div style="display:flex;gap:6px">
+      <button class="btn btn-outline btn-sm" onclick="editAdmin('${a.AdminID}','${esc(a.Password)}')">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteAdmin('${a.AdminID}')">🗑</button>
+    </div></td>
+  </tr>`).join('') : '<tr class="empty-row"><td colspan="3">No admins</td></tr>';
+}
+
+function editAdmin(id, pwd) {
+  document.getElementById('ea-id').value=id;
+  document.getElementById('ea-id-show').value=id;
+  document.getElementById('ea-pwd').value=pwd;
+  openModal('editAdmin');
+}
+
+async function submitAddAdmin() {
+  const r = await api('POST','/api/admins',{adminID:v('na-id'),password:v('na-pwd')});
+  if (r.success) { toast(r.message); closeModal('addAdmin'); clearInputs(['na-id','na-pwd']); loadAdmins(); }
+  else toast(r.error,'error');
+}
+
+async function submitEditAdmin() {
+  const r = await api('PUT',`/api/admins/${document.getElementById('ea-id').value}`,{password:v('ea-pwd')});
+  if (r.success) { toast(r.message); closeModal('editAdmin'); loadAdmins(); }
+  else toast(r.error,'error');
+}
+
+async function deleteAdmin(id) {
+  if (!confirm(`Delete admin ${id}?`)) return;
+  const r = await api('DELETE',`/api/admins/${id}`);
+  if (r.success) { toast(r.message); loadAdmins(); }
+  else toast(r.error,'error');
+}
+
+// ── BOOK CENTRE (User) ────────────────────────────────────────────────────
+async function loadBookCentre() {
+  // Check if user has a book
+  const mb = await api('GET',`/api/mybook/${STATE.userId}`);
+  const banner = document.getElementById('issuedBanner');
+  if (mb.has_book) {
+    banner.style.display='flex';
+    document.getElementById('issuedBannerTitle').textContent = `📖 "${mb.book.BookName}" — Issued`;
+    document.getElementById('issuedBannerSub').textContent = `By ${mb.book.Author} | Book ID: ${mb.book.BookID}`;
+    banner._bookID = mb.book.BookID;
+  } else {
+    banner.style.display='none';
+  }
+  loadUserBooks();
+}
+
+async function loadUserBooks(data) {
+  const books = data || await api('GET','/api/books');
+  const tb = document.getElementById('userBooksTable');
+  tb.innerHTML = books.length ? books.map(b => {
+    const avail = !b.IssuedBy;
+    return `<tr>
+      <td><span class="pill pill-gold">${b.BookID}</span></td>
+      <td><strong>${b.BookName}</strong></td>
+      <td>${b.Author}</td>
+      <td>${b.Publisher}</td>
+      <td>${avail ? '<span class="pill pill-green">Available</span>' : `<span class="pill pill-red">Issued to ${b.IssuedBy}</span>`}</td>
+      <td>${avail ? `<button class="btn btn-success btn-sm" onclick="issueBook('${b.BookID}')">📖 Issue</button>` : ''}</td>
+    </tr>`;
+  }).join('') : '<tr class="empty-row"><td colspan="6">No books in library</td></tr>';
+}
+
+async function searchUserBooks() {
+  const q = document.getElementById('userBookSearch').value.trim();
+  if (!q) { loadUserBooks(); return; }
+  loadUserBooks(await api('GET',`/api/books/search/${encodeURIComponent(q)}`));
+}
+
+async function issueBook(bookID) {
+  const r = await api('POST','/api/issue',{userID:STATE.userId, bookID});
+  if (r.success) { toast(r.message); loadBookCentre(); }
+  else toast(r.error,'error');
+}
+
+async function returnMyBook() {
+  const banner = document.getElementById('issuedBanner');
+  const bookID = banner._bookID;
+  if (!bookID) return;
+  const r = await api('POST','/api/return',{userID:STATE.userId, bookID});
+  if (r.success) { toast(r.message); loadBookCentre(); }
+  else toast(r.error,'error');
+}
+
+// ── FEEDBACK ───────────────────────────────────────────────────────────────
+async function loadFeedback() {
+  const fb = await api('GET','/api/feedback');
+  const tb = document.getElementById('feedbackTable');
+  tb.innerHTML = fb.length ? fb.map(f=>`<tr>
+    <td>${f.FeedbackText}</td>
+    <td>${'⭐'.repeat(Math.min(f.Rating,10))} <strong>${f.Rating}/10</strong></td>
+    <td style="color:var(--muted);font-size:12px">${f.submitted_at||'—'}</td>
+  </tr>`).join('') : '<tr class="empty-row"><td colspan="3">No feedback yet</td></tr>';
+}
+
+function buildStars() {
+  const bar = document.getElementById('starBar');
+  bar.innerHTML = '';
+  for (let i=1;i<=10;i++) {
+    const s=document.createElement('span');
+    s.className='star'; s.textContent='⭐'; s.dataset.v=i;
+    s.onclick=()=>{ document.getElementById('ratingVal').value=i;
+      document.querySelectorAll('.star').forEach(x=>x.classList.toggle('active',+x.dataset.v<=i)); };
+    bar.appendChild(s);
+  }
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackText').value.trim();
+  const rating = document.getElementById('ratingVal').value;
+  if (!text) { toast('Please write your feedback','error'); return; }
+  if (!rating || rating==='0') { toast('Please select a rating','error'); return; }
+  const r = await api('POST','/api/feedback',{feedback:text,rating:parseInt(rating)});
+  if (r.success) {
+    toast(r.message);
+    document.getElementById('feedbackText').value='';
+    document.getElementById('ratingVal').value='0';
+    document.querySelectorAll('.star').forEach(s=>s.classList.remove('active'));
+  } else toast(r.error,'error');
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+const v = id => document.getElementById(id).value.trim();
+const esc = s => (s||'').replace(/'/g,"\\'");
+function clearInputs(ids) { ids.forEach(id=>document.getElementById(id).value=''); }
+
+// keyboard enter on login
+document.getElementById('adminPwd').addEventListener('keydown',e=>{ if(e.key==='Enter') doAdminLogin(); });
+document.getElementById('userPwd').addEventListener('keydown', e=>{ if(e.key==='Enter') doUserLogin(); });
+</script>
+</body>
+</html>
